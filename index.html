@@ -177,6 +177,15 @@
     ctx.fillStyle = "#020203";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    // DRAW STUN GUN SHOCKWAVE EXPANSION RING (drawn before clipping)
+    if (stunBlast.active) {
+      ctx.strokeStyle = "#00ffff";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(stunBlast.x, stunBlast.y, stunBlast.radius, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
     // FLASHLIGHT LENS LIGHT CONE CONTAINER
     ctx.save();
     ctx.beginPath();
@@ -188,33 +197,30 @@
 
     // Draw active key
     ctx.font = `${activeKey.size}px sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
     ctx.fillText(activeKey.emoji, activeKey.x, activeKey.y);
 
     // Draw stalker spider
     ctx.font = `${monster.size}px sans-serif`;
-    ctx.fillText(monster.emoji, monster.x - 12, monster.y - 12);
+    ctx.fillText(monster.emoji, monster.x, monster.y);
 
     ctx.restore(); 
-
-    // DRAW STUN GUN SHOCKWAVE EXPANSION RING
-    if (stunBlast.active) {
-      ctx.strokeStyle = "#00ffff";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(stunBlast.x, stunBlast.y, stunBlast.radius, 0, Math.PI * 2);
-      ctx.stroke();
-    }
 
     // Visual indicators if spider is electrocuted
     if (monster.stunTimer > 0) {
       ctx.fillStyle = "#00ffff";
       ctx.font = "bold 12px monospace";
-      ctx.fillText("⚡ SHOCKSTUNNED ⚡", monster.x - 45, monster.y - 25);
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("⚡ SHOCKSTUNNED ⚡", monster.x, monster.y - 35);
     }
 
     // Telemetry UI Panels text
     ctx.fillStyle = "#ff3333";
     ctx.font = "bold 13px monospace";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
     ctx.fillText(`KEYS FOUND: ${keysCollected}/${totalKeysNeeded}`, 15, 25);
     
     // Weapon dynamic status gauge text loading indicator
@@ -227,15 +233,23 @@
     }
 
     if (gameOver) {
-      ctx.fillStyle = "black"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "red"; ctx.font = "bold 44px sans-serif"; ctx.textAlign = "center";
-      ctx.fillText("YOU DIED", 200, 180);
+      ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "red";
+      ctx.font = "bold 44px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("YOU DIED", canvas.width / 2, canvas.height / 2);
     }
 
     if (victory) {
-      ctx.fillStyle = "#051505"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#00ff66"; ctx.font = "bold 40px sans-serif"; ctx.textAlign = "center";
-      ctx.fillText("ESCAPED!", 200, 180);
+      ctx.fillStyle = "rgba(5, 21, 5, 0.9)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#00ff66";
+      ctx.font = "bold 40px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("ESCAPED!", canvas.width / 2, canvas.height / 2);
     }
   }
 
