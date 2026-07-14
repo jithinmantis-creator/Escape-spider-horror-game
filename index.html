@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <style>
+    body {
+      background-color: #020205; 
+      color: #ff3333;
+      font-family: 'Courier New', Courier, monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      user-select: none;
+      touch-action: none;
+      overflow: hidden;
+    }
+    #horrorCanvas {
+      background-color: #050508;
+      border: 3px solid #ff3333; 
+      border-radius: 8px;
+      box-shadow: 0 0 25px rgba(255, 51, 51, 0.2);
+      max-width: 95vw;
+      max-height: 60vh;
+      cursor: none; 
+    }
+    .ui-text {
+      margin-top: 15px;
+      text-align: center;
+      font-weight: bold;
+      letter-spacing: 2px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2 style="margin: 5px 0; text-shadow: 0 0 8px #ff0000;">⚠️ DON'T LOOK BACK ⚠️</h2>
+  <canvas id="horrorCanvas" width="400" height="400"></canvas>
+  
+  <div class="ui-text">
+    DRAG TO MOVE LIGHT • <b>TAP CANVAS TO STUN SPIDER!</b><br>
+    <span style="color: #666; font-size: 12px;">Weapon recharge takes 3 seconds after firing!</span>
+  </div>
+
+<script>
+  const canvas = document.getElementById("horrorCanvas");
+  const ctx = canvas.getContext("2d");
+
+  let keysCollected = 0;
+  let totalKeysNeeded = 5;
+  let gameOver = false;
+  let victory = false;
+  let heartbeatTimer = 0;
+
+  const flashlight = { x: 200, y: 200, radius: 65 };
+
+  // Monster properties with a freeze timer system
+  const monster = {
+    x: 20, y: 20, size: 32, speed: 1.8, emoji: "🕷️",
+    stunTimer: 0,
+    monsterSpeed: function() {
+      if (this.stunTimer > 0) return 0; // Frozen solid!
+      return this.speed + (keysCollected * 0.4);
+    }
+  };
+
+  const activeKey = { x: 0, y: 0, size: 20, emoji: "🔑" };
+  spawnNewKey();
+
+  // Stun Blast Projectile Properties
+  const stunBlast = { x: 0, y: 0, active: false, radius: 0, maxRadius: 50, speed: 4 };
+  let weaponCooldown = 0;
+
+  // Track finger slide or cursor
+  window.addEventListener("mousemove", trackMovement);
+  window.addEventListener("touchmove", (e) => {
+    if (e.touches.length > 0) trackMovement(e.touches[0]);
+  });
+
+  function trackMovement(e) {
+    if (gameOver || victory) return;
+    const rect = canvas.getBoundingClientRect();
+    flashlight.x = ((e.clientX - rect.left) / rect.width) * canvas.width;
+    flashlight.y = ((e.clientY - rect.top) / rect.height) * canvas.height;
+  }
+
+  // Firing your stun gun escape tool on tap
+  canvas.addEventListener("pointerdown", (e) => {
+    if (gameOver || victory) {
+      // Soft reset game check
+      keysCollected = 0; gameOver = false; victory = false; weaponCooldown = 0;
+      monster.x = 20; monster.y = 20; monster.stunTimer = 0; spawnNewKey();
+      return;
+    }
+
+    // Fire weapon if fully loaded
+    if (weaponCooldown <= 0 && !stunBlast.active) {
+      stunBlast.x = flashlight.x;
+      stunBlast.y = flashlight.y;
+      stunBlast.radius = 5;
+      stunBlast.active = true;
+      weaponCooldown = 180; // 3 second weapon reload countdown
+    }
+  });
+
+  function spawnNewKey() {
+    activeKey.x = Math.random() * (canvas.width - 40) + 20;
+    activeKey.y = Math.random() * (canvas.height - 40) + 20;
+  }
+
+  function update() {
+    if (gameOver || victory) return;
+
+    if (weaponCooldown > 0) weaponCooldown--;
+    if (monster.stunTimer > 0) monster.stunTimer--;
+
+    // Move Stun Blast Wave
+    if (stunBlast.active) {
+      stunBlast.radius += stunBlast.speed;
+      
+      // Check if blast wave hits spider
+      let dx = monster.x - stunBlast.x;
+      let dy = monster.y - stunBlast.y;
+      let dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (dist <= stunBlast.radius + 10 && dist >= stunBlast.radius - 10) {
+        monster.stunTimer = 120; // Freeze spider for 2 full seconds (120 game frames)
+        stunBlast.active = false;
+      }
+      
+      if (stunBlast.radius >= stunBlast.maxRadius) {
+        stunBlast.active = false;
+      }
+    }
+
+    // Move Monster tracking
+    let dx = flashlight.x - monster.x;
+    let dy = flashlight.y - monster.y;
+    let dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist > 0) {
+      monster.x += (dx / dist) * monster.monsterSpeed();
+      monster.y += (dy / dist) * monster.monsterSpeed();
+    }
+
+    // Jumpscare Collision (only matters if monster isn't frozen)
+    if (dist < 22 && monster.stunTimer <= 0) {
+      gameOver = true;
+    }
+
+    // Key Collection Check
+    let keyDx = flashlight.x - activeKey.x;
+    let keyDy = flashlight.y - activeKey.y;
+    let keyDist = Math.sqrt(keyDx * keyDx + keyDy * keyDy);
+    
+    if (keyDist < 25) {
+      keysCollected++;
+      if (keysCollected >= totalKeysNeeded) victory = true;
+      else spawnNewKey();
+    }
+
+    // Heartbeat pulses (skip if spider is frozen)
+    if (monster.stunTimer <= 0) {
+      heartbeatTimer++;
+      let pulseRate = dist > 150 ? 40 : dist > 70 ? 20 : 8;
+      if (heartbeatTimer % pulseRate === 0) {
+        document.body.style.backgroundColor = "#1a0505";
+        setTimeout(() => document.body.style.backgroundColor = "#020205", 60);
+      }
+    }
+  }
+
+  function draw() {
+    ctx.fillStyle = "#020203";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // FLASHLIGHT LENS LIGHT CONE CONTAINER
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(flashlight.x, flashlight.y, flashlight.radius, 0, Math.PI * 2);
+    ctx.clip(); 
+
+    ctx.fillStyle = "#2c2c22"; 
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw active key
+    ctx.font = `${activeKey.size}px sans-serif`;
+    ctx.fillText(activeKey.emoji, activeKey.x, activeKey.y);
+
+    // Draw stalker spider
+    ctx.font = `${monster.size}px sans-serif`;
+    ctx.fillText(monster.emoji, monster.x - 12, monster.y - 12);
+
+    ctx.restore(); 
+
+    // DRAW STUN GUN SHOCKWAVE EXPANSION RING
+    if (stunBlast.active) {
+      ctx.strokeStyle = "#00ffff";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(stunBlast.x, stunBlast.y, stunBlast.radius, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Visual indicators if spider is electrocuted
+    if (monster.stunTimer > 0) {
+      ctx.fillStyle = "#00ffff";
+      ctx.font = "bold 12px monospace";
+      ctx.fillText("⚡ SHOCKSTUNNED ⚡", monster.x - 45, monster.y - 25);
+    }
+
+    // Telemetry UI Panels text
+    ctx.fillStyle = "#ff3333";
+    ctx.font = "bold 13px monospace";
+    ctx.fillText(`KEYS FOUND: ${keysCollected}/${totalKeysNeeded}`, 15, 25);
+    
+    // Weapon dynamic status gauge text loading indicator
+    if (weaponCooldown > 0) {
+      ctx.fillStyle = "#666";
+      ctx.fillText("STUN GUN: RELOADING...", 15, 45);
+    } else {
+      ctx.fillStyle = "#00ffff";
+      ctx.fillText("STUN GUN: READY [TAP]", 15, 45);
+    }
+
+    if (gameOver) {
+      ctx.fillStyle = "black"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "red"; ctx.font = "bold 44px sans-serif"; ctx.textAlign = "center";
+      ctx.fillText("YOU DIED", 200, 180);
+    }
+
+    if (victory) {
+      ctx.fillStyle = "#051505"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#00ff66"; ctx.font = "bold 40px sans-serif"; ctx.textAlign = "center";
+      ctx.fillText("ESCAPED!", 200, 180);
+    }
+  }
+
+  function gameLoop() { update(); draw(); requestAnimationFrame(gameLoop); }
+  gameLoop();
+</script>
+
+</body>
+</html>
