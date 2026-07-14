@@ -58,11 +58,12 @@
 
   // Monster properties with a freeze timer system
   const monster = {
-    x: 20, y: 20, size: 32, speed: 1.8, emoji: "🕷️",
+    x: 20, y: 20, size: 32, emoji: "🕷️",
     stunTimer: 0,
+    speed: 1,
     monsterSpeed: function() {
       if (this.stunTimer > 0) return 0; // Frozen solid!
-      return this.speed + (keysCollected * 0.4);
+      return this.speed; // CONSTANT SPEED - no scaling!
     }
   };
 
